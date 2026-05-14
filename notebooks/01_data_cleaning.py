@@ -23,7 +23,7 @@ df['business_category'] = df['business_category'].str.strip()
 
 df['qris_volume_monthly'] = df['qris_volume_monthly'].astype(str).str.replace(r'[^\d]','',regex=True)
 df['qris_volume_monthly'] = pd.to_numeric(df['qris_volume_monthly'], errors='coerce')
-df['qris_volume_monthly'] = df['qris_volume_monthly'].fillna(df['qris_volume_monthly'].median)
+df['qris_volume_monthly'] = df['qris_volume_monthly'].fillna(df['qris_volume_monthly'].median())
 
 duplikat = df['merchant_id'].duplicated().sum()
 
