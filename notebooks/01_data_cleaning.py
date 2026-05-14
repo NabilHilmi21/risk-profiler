@@ -40,16 +40,27 @@ df['business_category'] = df['business_category'].replace(correction)
 
 df = pd.get_dummies(df, columns = ['business_category'], drop_first = True, dtype = int)
 
+df['volume_per_active_day'] = df['qris_volume_monthly'] / (df['qris_active_days'] + 1)
+df['pln_delay_ratio'] = df['pln_delay_days'] / (df['business_age_months'] + 1)
+df['volume_to_age_ratio'] = df['qris_volume_monthly'] / (df['business_age_months'] + 1)
+df['chronic_pln_delay'] = (df['pln_delay_days'] > 14).astype(int)
+
 scaler = StandardScaler()
 
-numeric_features = ['business_age_months', 'qris_volume_monthly', 'qris_active_days', 'pln_delay_days']
+numeric_features = [
+    'business_age_months', 
+    'qris_volume_monthly', 
+    'qris_active_days', 
+    'pln_delay_days',
+    'volume_per_active_day',
+    'pln_delay_ratio',
+    'volume_to_age_ratio'
+    ]
 
 df[numeric_features] = scaler.fit_transform(df[numeric_features])   
 
+df.info()
 df[numeric_features].describe()
-        
-# %%
-
-df.describe()
-
+df.head()
+    
 # %%
