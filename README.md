@@ -1,7 +1,7 @@
 # Risk Profiler: Alternative Credit Scoring Engine
 
 ## Deskripsi Proyek
-Risk Profiler adalah infrastruktur Back-End B2B SaaS yang dirancang untuk memitigasi risiko kredit pada segmen UMKM yang belum terjangkau perbankan (unbanked) di Indonesia. Sistem ini berfungsi sebagai mesin analitik yang mengonversi jejak digital alternatif—seperti transaksi QRIS, riwayat pembayaran utilitas, dan aktivitas e-commerce—menjadi metrik profil risiko yang terukur dan transparan.
+Risk Profiler adalah infrastruktur Back-End B2B SaaS yang dirancang untuk memitigasi risiko kredit pada segmen UMKM yang belum terjangkau perbankan (unbanked) di Indonesia. Sistem ini berfungsi sebagai mesin analitik yang mengonversi jejak digital alternatif, seperti transaksi QRIS, riwayat pembayaran utilitas, dan aktivitas e-commerce, menjadi metrik profil risiko yang terukur dan transparan.
 
 Proyek ini dikembangkan dalam rangka PIDI DIGDAYA X HACKATHON 2026 untuk mendukung inklusi ekonomi nasional dengan menyediakan alat ukur risiko yang objektif bagi lembaga keuangan seperti BPR, Bank Syariah, dan Koperasi.
 
