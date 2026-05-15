@@ -43,6 +43,11 @@ df['qris_volume_monthly'] = df['qris_volume_monthly'].astype(str).str.replace(r'
 df['qris_volume_monthly'] = pd.to_numeric(df['qris_volume_monthly'], errors='coerce')
 df['qris_volume_monthly'] = df['qris_volume_monthly'].fillna(df['qris_volume_monthly'].median())
 
+df['pdam_bill_avg'] = df['pdam_bill_avg'].fillna(0)
+df['pdam_late_payments'] = df['pdam_late_payments'].fillna(0)
+
+df['pdam_bill_avg'] = df['pdam_bill_avg'].abs()
+
 duplikat = df['merchant_id'].duplicated().sum()
 
 df['business_age_months'] = df['business_age_months'].abs()
@@ -67,8 +72,8 @@ df = add_featured_engineering(df)
 # 2 = NONO YAH (high risk)
 df["risk_level"] = 0
 
-df.loc[(df["pln_delay_days"] > 5) | (df["ecommerce_rating"] < 4), "risk_level"] = 1
-df.loc[(df["pln_delay_days"] > 14) | (df["ecommerce_rating"] < 3.5), "risk_level"] = 2
+df.loc[(df["pln_delay_days"] > 5) | (df["ecommerce_rating"] < 4) | (df["pdam_late_payments"] > 1), "risk_level"] = 1
+df.loc[(df["pln_delay_days"] > 14) | (df["ecommerce_rating"] < 3.5) | (df["pdam_late_payments"] > 3), "risk_level"] = 2
 
 scaler = StandardScaler()
 
@@ -79,7 +84,9 @@ numeric_features = [
     'pln_delay_days',
     'volume_per_active_day',
     'pln_delay_ratio',
-    'volume_to_age_ratio'
+    'volume_to_age_ratio',
+    'pdam_bill_avg',
+    'pdam_late_payments'
     ]
 
 df[numeric_features] = scaler.fit_transform(df[numeric_features])   
@@ -89,4 +96,28 @@ df[numeric_features].describe()
 df.head()
 
 df.to_csv('../data/processed/cleaned_risk_profiler.csv', index=False)
+# %%
+
+#ini data splitting ok
+
+from sklearn.model_selection import train_test_split
+
+X = df.drop(columns = ['merchant_id', 'risk_level'], errors = 'ignore')
+y = df['risk_level']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size = 0.2,
+    random_state = 42,
+    stratify = y
+)
+
+print(len(df))
+print(len(X_train))
+print(len(X_test))
+
+X_train.to_csv('../data/processed/X_train.csv', index=False)
+X_test.to_csv('../data/processed/X_test.csv', index=False)
+y_train.to_csv('../data/processed/y_train.csv', index=False)
+y_test.to_csv('../data/processed/y_test.csv', index=False)
 # %%
