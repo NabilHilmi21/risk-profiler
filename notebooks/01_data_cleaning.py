@@ -1,6 +1,24 @@
 #%%
+import importlib.util
+from pathlib import Path
+
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+
+# so ini buat import file feature engineering
+# jadi panjang cuz penamaan file awalnya ada angka
+module_path = Path("../notebooks/02_feature_engineering.py")
+
+spec = importlib.util.spec_from_file_location(
+    "feature_module",
+    module_path
+)
+
+feature_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(feature_module)
+
+# ini buat import functionnya di dalem file feature engineering
+add_featured_engineering = feature_module.add_featured_engineering
 
 df = pd.read_csv('../data/raw/messy_risk_profiler.csv')
 
@@ -40,10 +58,17 @@ df['business_category'] = df['business_category'].replace(correction)
 
 df = pd.get_dummies(df, columns = ['business_category'], drop_first = True, dtype = int)
 
-df['volume_per_active_day'] = df['qris_volume_monthly'] / (df['qris_active_days'] + 1)
-df['pln_delay_ratio'] = df['pln_delay_days'] / (df['business_age_months'] + 1)
-df['volume_to_age_ratio'] = df['qris_volume_monthly'] / (df['business_age_months'] + 1)
-df['chronic_pln_delay'] = (df['pln_delay_days'] > 14).astype(int)
+# bagian ini dipindahin jd ke featured_engineering
+df = add_featured_engineering(df)
+
+# buat target label biar AI bisa taro hasilnya 
+# 0 = low risk
+# 1 = medium risk
+# 2 = NONO YAH (high risk)
+df["risk_level"] = 0
+
+df.loc[(df["pln_delay_days"] > 5) | (df["ecommerce_rating"] < 4), "risk_level"] = 1
+df.loc[(df["pln_delay_days"] > 14) | (df["ecommerce_rating"] < 3.5), "risk_level"] = 2
 
 scaler = StandardScaler()
 
@@ -62,5 +87,6 @@ df[numeric_features] = scaler.fit_transform(df[numeric_features])
 df.info()
 df[numeric_features].describe()
 df.head()
-    
+
+df.to_csv('../data/processed/cleaned_risk_profiler.csv', index=False)
 # %%

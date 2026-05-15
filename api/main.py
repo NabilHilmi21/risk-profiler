@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.schemas import RiskInput, PredictionResponse
 from api.ml_service import predict_risk
 
-app = FastAPI(title="Risk Profiler API")
+app = FastAPI(
+    title="Risk Profiler API",
+    description="AI-powered credit scoring risk calculator for UMKM",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,

@@ -4,9 +4,7 @@ venv/
 
 # Python cache
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 
 # Jupyter
 .ipynb_checkpoints/
@@ -35,5 +33,12 @@ dist/
 # Streamlit
 .streamlit/secrets.toml
 
-# Models
-models/*.pkl
+# Data exports
+data/processed/
+
+# Notebook outputs
+*.ipynb_checkpoints
+
+# Coverage
+.coverage
+htmlcov/
