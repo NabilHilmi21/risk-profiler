@@ -1,12 +1,15 @@
 #%%
 import importlib.util
 from pathlib import Path
-
+import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
 
-# so ini buat import file feature engineering
-# jadi panjang cuz penamaan file awalnya ada angka
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+
+# =========================================================
+# IMPORT FEATURE ENGINEERING MODULE
+# =========================================================
 module_path = Path("../notebooks/02_feature_engineering.py")
 
 spec = importlib.util.spec_from_file_location(
@@ -17,108 +20,233 @@ spec = importlib.util.spec_from_file_location(
 feature_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(feature_module)
 
-# ini buat import functionnya di dalem file feature engineering
 add_featured_engineering = feature_module.add_featured_engineering
+
+# =========================================================
+# LOAD DATA
+# =========================================================
 
 df = pd.read_csv('../data/raw/messy_risk_profiler.csv')
 
-df.info()
+print("=== RAW DATA INFO ===")
+print(df.info())
 
 #%%
 
-missing_values = df.isnull().sum()
+# =========================================================
+# BASIC CLEANING
+# =========================================================
 
-numeric = df.select_dtypes(include = ['number']).columns
-categorical = df.select_dtypes(include = ['object']).columns
+# -------------------------
+# Missing Values
+# -------------------------
 
-df['pln_delay_days'] = df['pln_delay_days'].fillna(0) 
+df['pln_delay_days'] = df['pln_delay_days'].fillna(0)
 
-df['ecommerce_rating_isna'] = df['ecommerce_rating'].isna().astype(int)
-df['ecommerce_rating'] = df['ecommerce_rating'].fillna(df['ecommerce_rating'].median())
+df['ecommerce_rating_isna'] = (
+    df['ecommerce_rating']
+    .isna()
+    .astype(int)
+)
 
-df['business_category'] = df['business_category'].astype(str).str.lower()
-df['business_category'] = df['business_category'].str.strip()
-
-df['qris_volume_monthly'] = df['qris_volume_monthly'].astype(str).str.replace(r'[^\d]','',regex=True)
-df['qris_volume_monthly'] = pd.to_numeric(df['qris_volume_monthly'], errors='coerce')
-df['qris_volume_monthly'] = df['qris_volume_monthly'].fillna(df['qris_volume_monthly'].median())
+df['ecommerce_rating'] = (
+    df['ecommerce_rating']
+    .fillna(df['ecommerce_rating'].median())
+)
 
 df['pdam_bill_avg'] = df['pdam_bill_avg'].fillna(0)
-df['pdam_late_payments'] = df['pdam_late_payments'].fillna(0)
 
-df['pdam_bill_avg'] = df['pdam_bill_avg'].abs()
+df['pdam_late_payments'] = (
+    df['pdam_late_payments']
+    .fillna(0)
+)
 
-duplikat = df['merchant_id'].duplicated().sum()
+# -------------------------
+# Clean Business Category
+# -------------------------
 
-df['business_age_months'] = df['business_age_months'].abs()
-
-df = df[df['qris_active_days'] <= 31]
+df['business_category'] = (
+    df['business_category']
+    .astype(str)
+    .str.lower()
+    .str.strip()
+)
 
 correction = {
     'f & b': 'fnb',
     'f&b': 'fnb',
 }
 
-df['business_category'] = df['business_category'].replace(correction)
-
-df = pd.get_dummies(df, columns = ['business_category'], drop_first = True, dtype = int)
-
-# bagian ini dipindahin jd ke featured_engineering
-df = add_featured_engineering(df)
-
-# buat target label biar AI bisa taro hasilnya 
-# 0 = low risk
-# 1 = medium risk
-# 2 = NONO YAH (high risk)
-df["risk_level"] = 0
-
-df.loc[(df["pln_delay_days"] > 5) | (df["ecommerce_rating"] < 4) | (df["pdam_late_payments"] > 1), "risk_level"] = 1
-df.loc[(df["pln_delay_days"] > 14) | (df["ecommerce_rating"] < 3.5) | (df["pdam_late_payments"] > 3), "risk_level"] = 2
-
-scaler = StandardScaler()
-
-numeric_features = [
-    'business_age_months', 
-    'qris_volume_monthly', 
-    'qris_active_days', 
-    'pln_delay_days',
-    'volume_per_active_day',
-    'pln_delay_ratio',
-    'volume_to_age_ratio',
-    'pdam_bill_avg',
-    'pdam_late_payments'
-    ]
-
-df[numeric_features] = scaler.fit_transform(df[numeric_features])   
-
-df.info()
-df[numeric_features].describe()
-df.head()
-
-df.to_csv('../data/processed/cleaned_risk_profiler.csv', index=False)
-# %%
-
-#ini data splitting ok
-
-from sklearn.model_selection import train_test_split
-
-X = df.drop(columns = ['merchant_id', 'risk_level'], errors = 'ignore')
-y = df['risk_level']
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size = 0.2,
-    random_state = 42,
-    stratify = y
+df['business_category'] = (
+    df['business_category']
+    .replace(correction)
 )
 
-print(len(df))
-print(len(X_train))
-print(len(X_test))
+# -------------------------
+# Clean QRIS Volume
+# -------------------------
 
-X_train.to_csv('../data/processed/X_train.csv', index=False)
-X_test.to_csv('../data/processed/X_test.csv', index=False)
-y_train.to_csv('../data/processed/y_train.csv', index=False)
-y_test.to_csv('../data/processed/y_test.csv', index=False)
+df['qris_volume_monthly'] = (
+    df['qris_volume_monthly']
+    .astype(str)
+    .str.replace(r'[^\d.]', '', regex=True)
+)
+
+df['qris_volume_monthly'] = pd.to_numeric(
+    df['qris_volume_monthly'],
+    errors='coerce'
+)
+
+df['qris_volume_monthly'] = (
+    df['qris_volume_monthly']
+    .fillna(df['qris_volume_monthly'].median())
+)
+
+# -------------------------
+# Remove Invalid Data
+# -------------------------
+
+df = df[df['business_age_months'] >= 0]
+
+df = df[df['pdam_bill_avg'] >= 0]
+
+df = df[df['qris_active_days'] <= 31]
+
+# =========================================================
+# REMOVE DUPLICATES
+# =========================================================
+
+before_dup = len(df)
+
+df = df.drop_duplicates(subset='merchant_id')
+
+after_dup = len(df)
+
+print(f'Removed duplicates: {before_dup - after_dup}')
+
+# =========================================================
+# ENCODING
+# =========================================================
+
+df = pd.get_dummies(
+    df,
+    columns=['business_category'],
+    drop_first=True,
+    dtype=int
+)
+
+df = df.drop(columns = ['business_category'], errors = 'ignore')
+
+# =========================================================
+# FEATURE ENGINEERING
+# =========================================================
+
+df = add_featured_engineering(df)
+
+# =========================================================
+# FEATURE / TARGET SPLIT
+# =========================================================
+
+# Drop direct + derived leakage
+leakage_features = [
+    'risk_score'
+]
+
+X = df.drop(
+    columns=[
+        'merchant_id',
+        'risk_level',
+        *leakage_features
+    ],
+    errors='ignore'
+)
+
+y = df['risk_level']
+
+# =========================================================
+# TRAIN TEST SPLIT
+# =========================================================
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# =========================================================
+# FEATURE SCALING
+# AFTER SPLIT
+# =========================================================
+
+numeric_features = [
+    'business_age_months',
+    'qris_volume_monthly',
+    'qris_active_days',
+    'ecommerce_rating', 
+    'pln_delay_days',   
+    'pdam_bill_avg',
+    'pdam_late_payments',
+    'volume_per_active_day',
+    'volume_to_age_ratio',
+    'pln_delay_ratio'
+]
+
+feature_scaler = MinMaxScaler()
+
+X_train[numeric_features] = feature_scaler.fit_transform(
+    X_train[numeric_features]
+)
+
+X_test[numeric_features] = feature_scaler.transform(
+    X_test[numeric_features]
+)   
+
+# =========================================================
+# SAVE DATASETS
+# =========================================================
+
+X_train.to_csv(
+    '../data/processed/X_train.csv',
+    index=False
+)
+
+X_test.to_csv(
+    '../data/processed/X_test.csv',
+    index=False
+)
+
+y_train.to_csv(
+    '../data/processed/y_train.csv',
+    index=False
+)
+
+y_test.to_csv(
+    '../data/processed/y_test.csv',
+    index=False
+)
+
+df.to_csv(
+    '../data/processed/cleaned_risk_profiler.csv',
+    index=False
+)
+
+# =========================================================
+# FINAL INFO
+# =========================================================
+
+print("\n=== FINAL DATA INFO ===")
+print(df.info())
+
+print("\n=== LABEL DISTRIBUTION ===")
+print(df['risk_level'].value_counts(normalize=True))
+
+print("\n=== TRAIN TEST SHAPE ===")
+print(f'X_train: {X_train.shape}')
+print(f'X_test : {X_test.shape}')
+
+print(y_train.value_counts())
+print(y_train.value_counts(normalize=True))
 
 # %%
